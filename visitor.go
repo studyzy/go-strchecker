@@ -24,87 +24,73 @@ func (v *treeVisitor) Visit(node ast.Node) ast.Visitor {
 	if node == nil {
 		return v
 	}
-
-	// A single case with "ast.BasicLit" would be much easier
-	// but then we wouldn't be able to tell in which context
-	// the string is defined (could be a constant definition).
 	switch t := node.(type) {
 	// Scan for constants in an attempt to match strings with existing constants
 	case *ast.GenDecl:
 		if t.Tok != token.CONST {
 			return v
 		}
-
-		for _, spec := range t.Specs {
-			val := spec.(*ast.ValueSpec)
-			for i, str := range val.Values {
-				lit, ok := str.(*ast.BasicLit)
-				if !ok {
-					continue
-				}
-				v.addString(lit.Value, val.Names[i].Pos(), Const)
-			}
-		}
-
+		v.processConst(t)
 	// foo := "moo"
 	case *ast.AssignStmt:
-		for _, rhs := range t.Rhs {
-			lit, ok := rhs.(*ast.BasicLit)
-			if !ok {
-				continue
-			}
-
-			v.addString(lit.Value, rhs.(*ast.BasicLit).Pos(), Assignment)
-		}
 
 	// if foo == "moo"
 	case *ast.BinaryExpr:
-		if t.Op != token.EQL && t.Op != token.NEQ {
-			return v
-		}
-
-		var lit *ast.BasicLit
-		var ok bool
-
-		lit, ok = t.X.(*ast.BasicLit)
-		if ok {
-			v.addString(lit.Value, lit.Pos(), Binary)
-		}
-
-		lit, ok = t.Y.(*ast.BasicLit)
-		if ok {
-			v.addString(lit.Value, lit.Pos(), Binary)
-		}
+		v.processBinaryExpr(t)
 
 	// case "foo":
 	case *ast.CaseClause:
-		for _, item := range t.List {
-			lit, ok := item.(*ast.BasicLit)
-			if ok {
-				v.addString(lit.Value, lit.Pos(), Case)
-			}
-		}
+		v.processCaseExpr(t)
 
 	// return "boo"
 	case *ast.ReturnStmt:
-		for _, item := range t.Results {
-			lit, ok := item.(*ast.BasicLit)
-			if ok {
-				v.addString(lit.Value, lit.Pos(), Return)
-			}
-		}
+		v.processReturnExpr(t)
 
 	// fn("http://")
 	case *ast.CallExpr:
-		for _, item := range t.Args {
-			lit, ok := item.(*ast.BasicLit)
-			if ok {
-				v.addString(lit.Value, lit.Pos(), Call)
-			}
-		}
+		v.processCallExpr(t)
 	}
 
 	return v
+}
+
+func (v *treeVisitor) processConst(t *ast.GenDecl) {
+	for _, spec := range t.Specs {
+		val := spec.(*ast.ValueSpec)
+		for _, str := range val.Values {
+			v.processExpr(str, Const)
+		}
+	}
+}
+func (v *treeVisitor) processAssignStmt(t *ast.AssignStmt) {
+	for _, rhs := range t.Rhs {
+		v.processExpr(rhs, Assignment)
+	}
+}
+func (v *treeVisitor) processCaseExpr(t *ast.CaseClause) {
+	for _, item := range t.List {
+		v.processExpr(item, Case)
+	}
+}
+func (v *treeVisitor) processBinaryExpr(t *ast.BinaryExpr) {
+	v.processExpr(t.X, Binary)
+	v.processExpr(t.Y, Binary)
+}
+
+func (v *treeVisitor) processCallExpr(t *ast.CallExpr) {
+	for _, item := range t.Args {
+		v.processExpr(item, Call)
+	}
+}
+func (v *treeVisitor) processReturnExpr(t *ast.ReturnStmt) {
+	for _, item := range t.Results {
+		v.processExpr(item, Return)
+	}
+}
+func (v *treeVisitor) processExpr(t ast.Expr, typ Type) {
+	if bl, ok := t.(*ast.BasicLit); ok {
+		v.addString(bl.Value, bl.Pos(), typ)
+	}
 }
 
 // addString adds a string in the map along with its position in the tree.

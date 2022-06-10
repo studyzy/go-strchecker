@@ -1,8 +1,10 @@
 # go-strchecker
 golang code string checker
 # Get Started
-> go install github.com/studyzy/go-strchecker/cmd/strchecker@latest
-> strchecker ./...
+```bash
+  go install github.com/studyzy/go-strchecker/cmd/strchecker@latest
+  strchecker ./...
+```
 # Usage
 ```bash
   strchecker ARGS <directory> [<directory>...]
@@ -21,4 +23,11 @@ Flags:
   strchecker ./...
   strchecker -skip-file "_mock.go" $GOPATH/src/github.com/studyzy/iocgo
   strchecker -invalid-str "[，。？！]" -output json $GOPATH/src/github.com/studyzy/iocgo
+```
+# Result
+```bash
+0 testdata/main.go:10:30 has invalid string: "not found！"
+1 testdata/main.go:12:7 has invalid string: "no，data！"
+2 testdata/main.go:15:14 has invalid string: "Hello，World！"
+
 ```
