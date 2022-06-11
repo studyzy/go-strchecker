@@ -37,6 +37,7 @@ var (
 	flagIgnoreTests   = flag.Bool("ignore-tests", true, "exclude tests from the search")
 	flagOutput        = flag.String("output", "text", "output formatting")
 	flagInvalidStr    = flag.String("invalid-str", "", "invalid string regular expression, by default: ASCII only")
+	flagInvalidType   = flag.Int("invalid-type", 0, "invalid string type: 0: ASCII only,1: ASCII and Chinese")
 	flagSetExitStatus = flag.Bool("set-exit-status", false, "Set exit status to 2 if any issues are found")
 )
 
@@ -72,12 +73,16 @@ func main() {
 }
 
 func run(path string) (bool, error) {
+	invalidStr := *flagInvalidStr
+	if *flagInvalidType == 1 { //ASCII表，中文和中文标点都允许，其他语言不允许
+		invalidStr = "[^\\x00-\\xff\u4e00-\u9fa5\u3002\uff1f\uff01\uff0c\u3001\uff1b\uff1a\u201c\u201d\u2018\u2019\uff08\uff09\u300a\u300b\u3008\u3009\u3010\u3011\u300e\u300f\u300c\u300d\ufe43\ufe44\u3014\u3015\u2026\u2014\uff5e\ufe4f\uffe5]"
+	}
 	gco, err := strchecker.New(
 		path,
 		*flagSkipFile,
 		*flagIgnoreTests,
 		map[strchecker.Type]bool{},
-		*flagInvalidStr,
+		invalidStr,
 	)
 	if err != nil {
 		return false, err
@@ -86,7 +91,6 @@ func run(path string) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-
 	return printOutput(strs, *flagOutput)
 }
 
