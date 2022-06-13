@@ -1,5 +1,5 @@
 # go-strchecker
-golang code string checker
+golang code string checker [【中文】](README_CN.md)
 # Get Started
 ```bash
   go install github.com/studyzy/go-strchecker/cmd/strchecker@latest
